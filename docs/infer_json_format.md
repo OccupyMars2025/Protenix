@@ -27,7 +27,7 @@ Each dictionary contains the following four keys:
 * `name`: A string representing the name of the inference job.
 * `sequences`: A list of dictionaries that describe the entities (e.g., proteins, DNA, RNA, small molecules, and ions) involved in the inference.
 * `covalent_bonds`: An optional list of dictionaries that define the covalent bonds between atoms from different entities.
-* `constraint`: An optional directory for providing constraints to enable additional specified structural information
+* `constraint`: An optional list of dictionaries for providing constraints to enable additional specified structural information
 
 Details of `sequences` and `covalent_bonds` are provided below.
 
@@ -199,7 +199,7 @@ The `covalent_bonds` section specifies covalent bonds between a polymer and a li
 To define a covalent bond, two atoms involved in the bond must be identified. The following fields are used:
 * `entity1`, `entity2`: The entity numbers for the two atoms involved in the bond. 
 The entity number corresponds to the order in which the entity appears in the `sequences` list, starting from 1.
-* `copy2`, `copy2`: The copy index (starting from 1) of the `entity1` and `entity2`, respectively. These fields are optional, but if specified, both `copy1` and `copy2` must be filled simultaneously or left empty at the same time. If neither field is provided, a bond will be created between all pairs of copies of the two entities. For example, if both entity1 and entity2 have two copies, a bond will be formed between entity1.copy1 and entity2.copy1, as well as between entity1.copy2 and entity2.copy2. In this case, the number of copies for both entities must be equal.
+* `copy1`, `copy2`: The copy index (starting from 1) of the `entity1` and `entity2`, respectively. These fields are optional, but if specified, both `copy1` and `copy2` must be filled simultaneously or left empty at the same time. If neither field is provided, a bond will be created between all pairs of copies of the two entities. For example, if both entity1 and entity2 have two copies, a bond will be formed between entity1.copy1 and entity2.copy1, as well as between entity1.copy2 and entity2.copy2. In this case, the number of copies for both entities must be equal.
 * `position1`, `position2` - The position of the residue (or ligand part) within the entity. 
 The position value starts at 1 and can vary based on the type of entity:
   * For **polymers** (e.g., proteins, DNA, RNA), the position corresponds to the location of the residue in the sequence.
@@ -235,7 +235,7 @@ Similar to the `covalent_bonds` mentioned above, a `contact` constraint consists
 
 * `entity1`, `entity2`: **[Required]** The entity number of the chains involved in the contact. (Same as *covalent bonds*)
 
-* `copy2`, `copy2`:  **[Required]** The copy index (starting from 1) of `entity1` and `entity2`, respectively. (Same as *covalent bonds*) 
+* `copy1`, `copy2`:  **[Required]** The copy index (starting from 1) of `entity1` and `entity2`, respectively. (Same as *covalent bonds*) 
 
 * `position1`, `position2`: **[Required]** The position of the residue (or ligand part) within the entity. (Same as *covalent bonds*) 
 
