@@ -785,7 +785,7 @@ class AtomAttentionEncoder(nn.Module):
         if r_l is not None:
             N_sample = r_l.size(-3)
 
-            # Broadcast the single and pair embedding from the trunk
+            # Broadcast the single and pair token-level embeddings from the trunk
             n_token = s.size(-2)
             c_l = c_l.unsqueeze(dim=-3) + self.linear_no_bias_s(
                 self.layernorm_s(
