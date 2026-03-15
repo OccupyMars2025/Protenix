@@ -362,7 +362,7 @@ def pad_at_dim(
     pad_length: Union[tuple[int], list[int]],
     value: float = 0,
 ) -> torch.Tensor:
-    """pad to input x at dimension dim with length pad_length[0] to the left and and pad_length[1] to the right.
+    """pad to input x at dimension dim with length pad_length[0] to the left and pad_length[1] to the right.
 
     Args:
         x (torch.Tensor): input

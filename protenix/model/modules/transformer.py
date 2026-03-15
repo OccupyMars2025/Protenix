@@ -787,6 +787,8 @@ class AtomAttentionEncoder(nn.Module):
 
             # Broadcast the single and pair token-level embeddings from the trunk
             n_token = s.size(-2)
+            # my note:c_l.unsqueeze(dim=-3),  why we need unsqueeze(dim=-3), it seems to assume c_l has just 
+            # 2 dimensions,             
             c_l = c_l.unsqueeze(dim=-3) + self.linear_no_bias_s(
                 self.layernorm_s(
                     broadcast_token_to_atom(
@@ -801,6 +803,10 @@ class AtomAttentionEncoder(nn.Module):
                 n_keys=self.n_keys,
                 compute_mask=False,
             )  # [..., N_sample, n_blocks, n_queries, n_keys, c_z]
+
+            # my note: it seems to assume p_lm has just 4 dimensions, 
+            # if p_lm has 5 dimensions, then p_lm.unsqueeze(dim=-5) will make no sense
+            
             p_lm = p_lm.unsqueeze(dim=-5) + self.linear_no_bias_z(
                 self.layernorm_z(z_local_pairs)
             )  # [..., N_sample, n_blocks, n_queries, n_keys, c_atompair]

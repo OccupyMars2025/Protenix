@@ -290,6 +290,10 @@ def rearrange_qk_to_dense_trunk(
     pad_left = (n_keys - n_queries) // 2
     pad_right = int((n_trunks - 1 / 2) * n_queries + n_keys / 2 - n + 1 / 2)
 
+    # my note: n_keys and n_queries are all even integers
+    # pad_right = (n_keys - n_queries) // 2 + (n_trunks * n_queries - n)
+    # https://github.com/OccupyMars2025/Protenix/wiki/explain-how-to-calculate-pad_right-for-the-key-tensor
+
     k_new = [
         pad_at_dim(k[i], dim=dim_k[i], pad_length=(pad_left, pad_right))
         for i in range(num_k)
@@ -859,7 +863,7 @@ def broadcast_token_to_local_atom_pair(
     Args:
         z_token (torch.Tensor): token pair embedding
             [..., N_token, N_token, d]
-        atom_to_token_idx (torch.Tensor): map atom idx to token idx
+        atom_to_token_idx (torch.Tensor): map atom idx to token idx, each atom_to_token_idx[i] is the token idx of atom i
             [N_atom]
 
     Returns:
@@ -867,7 +871,6 @@ def broadcast_token_to_local_atom_pair(
             [..., n_trunks, n_queries, n_keys, d]
         pad_mask (torch.Tensor):
             [n_trunks, n_queries, n_keys]
-        q_pad_length (int)
     """
 
     # [N_atom] -> [n_trunks, n_queries] and [n_trunks, n_keys]
