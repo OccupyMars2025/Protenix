@@ -381,7 +381,8 @@ class DiffusionTransformer(nn.Module):
             s (torch.Tensor): single embedding
                 [..., N, c_s]
             z (torch.Tensor): pair embedding
-                [..., N, N, c_z]
+                [..., N, N, c_z] (This shape seems to be wrong!!!)
+            z.shape should be [..., n_trunks, n_queries, n_keys, c_z]
             n_queries (int, optional): local window size of query tensor. If not None, will perform local attention. Defaults to None.
             n_keys (int, optional): local window size of key tensor. Defaults to None.
 
@@ -390,6 +391,7 @@ class DiffusionTransformer(nn.Module):
                 [..., N, c_a]
         """
         if z.shape[-2] > 2000 and (not self.training):
+        # should use:  a.shape[-2] > 2000
             clear_cache_between_blocks = True
         else:
             clear_cache_between_blocks = False
@@ -465,18 +467,20 @@ class AtomTransformer(nn.Module):
     ) -> torch.Tensor:
         """
         Args:
-            q (torch.Tensor): atom single embedding
+            q (q_l, torch.Tensor): atom single embedding, will be updated multiple times
                 [..., N_atom, c_atom]
-            c (torch.Tensor): atom single embedding
+            c (c_l, torch.Tensor): initial atom single embedding
                 [..., N_atom, c_atom]
-            p (torch.Tensor): atompair embedding in dense block shape.
-                [..., n_blocks, n_queries, n_keys, c_atompair]
+            p (p_lm, torch.Tensor): atom pair embedding in dense block shape.
+                [..., n_trunks, n_queries, n_keys, c_atompair]
 
         Returns:
             torch.Tensor: the output of AtomTransformer
                 [..., N_atom, c_atom]
         """
         n_blocks, n_queries, n_keys = p.shape[-4:-1]
+        # n_blocks is better to be called n_trunks or n_splits.
+        # Don’t mix up n_trunks and self.n_blocks(=3).
 
         assert n_queries == self.n_queries
         assert n_keys == self.n_keys
@@ -826,6 +830,9 @@ class AtomAttentionEncoder(nn.Module):
             n_keys=self.n_keys,
             compute_mask=False,
         )
+        # c_l_q.shape: [..., N_sample, n_blocks, n_queries, c_atom]
+        # c_l_k.shape: [..., N_sample, n_blocks, n_keys, c_atom]
+        # p_lm: [..., N_sample, n_blocks, n_queries, n_keys, c_atompair]
         if inplace_safe:
             p_lm += self.linear_no_bias_cl(F.relu(c_l_q[..., None, :]))
             p_lm += self.linear_no_bias_cm(F.relu(c_l_k[..., None, :, :]))

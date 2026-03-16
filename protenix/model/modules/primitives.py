@@ -231,10 +231,10 @@ def rearrange_qk_to_dense_trunk(
     """Rearrange q/k into blocked tensors for local operations.
 
     Args:
-        q (torch.Tensor): query tensor. Could be a tensor or a list of tensors.
-            [..., n_q, ...] (n_q is at dimension dim_q)
+        q (torch.Tensor | List[torch.Tensor]): query tensor. Could be a tensor or a list of tensors.
+            [..., n_q, ...] (n_q is the size of dimension dim_q)
         k (torch.Tensor | List[torch.Tensor]): key tensor. Could be a tensor or a list of tensors.
-            [..., n_k, ...] (n_k is at dimension dim_k)
+            [..., n_k, ...] (n_k is the size of dimension dim_k)
         dim_q (int): along which dimension to build the trunks. Could be an int or a list of int.
         dim_k (int): along which dimension to build the trunks. Could be an int or a list of int.
         n_queries (int, optional): local window size of query tensor.
@@ -243,13 +243,13 @@ def rearrange_qk_to_dense_trunk(
     Returns:
         tuple[Union[torch.Tensor, list[torch.Tensor]]]:
             q_trunked: torch.Tensor or list of tensors. Same as the input type.
-                [..., n_trunks, n_queries, ...]
+                [..., n_trunks, n_queries, ...],   [n_trunks, n_queries] replaces the original n_q
             k_trunked: torch.Tensor or list of tensors. Same as the input type.
-                [..., n_trunks, n_keys, ...]
+                [..., n_trunks, n_keys, ...],   [n_trunks, n_keys] replaces the original n_k
             padding_info (dict):
                 "mask_trunked": Optional[torch.Tensor]
                     [n_trunks, n_queries, n_keys]
-                "q_pad": query padded dimension
+                "q_pad": number of dimensions padded to the right of the query tensor
                 "k_pad_left": number of dimensions padded to the left of the key tensor
                 "k_pad_right": number of dimensions padded to the right of the key tensor
     """
@@ -271,7 +271,7 @@ def rearrange_qk_to_dense_trunk(
             if dim_x[i] < 0:
                 dim_x[i] = len(x[i].shape) + dim_x[i]
             assert x[i].size(dim_x[i]) == n_x
-        return x, dim_x, x_is_list, n_x, len(x)
+        return x, dim_x, x_is_list, n_x, len(x)  # n_x is the size of dimension dim_x, n_x represents the number of atoms
 
     q, dim_q, q_is_list, n, num_q = basic_checks(q, dim_q)
     k, dim_k, k_is_list, n_k, num_k = basic_checks(k, dim_k)
@@ -303,9 +303,11 @@ def rearrange_qk_to_dense_trunk(
     k_trunked = [
         k_new[i].unfold(dim_k[i], size=n_keys, step=n_queries) for i in range(num_k)
     ]
+    # now k_trunked[i].shape = [..., n_trunks, ..., n_keys],  n_trunks is at the dimension dim_k[i]
     k_trunked = [
         move_final_dim_to_dim(k_trunked[i], dim=dim_k[i] + 1) for i in range(num_k)
     ]
+    # now k_trunked[i].shape = [..., n_trunks, n_keys, ...],  n_trunks is at the dimension dim_k[i] 
 
     if compute_mask:
         pad_mask = q[0].new_ones(
