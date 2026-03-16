@@ -247,9 +247,11 @@ def rearrange_qk_to_dense_trunk(
             k_trunked: torch.Tensor or list of tensors. Same as the input type.
                 [..., n_trunks, n_keys, ...]
             padding_info (dict):
-                mask_trunked: torch.Tensor
+                "mask_trunked": Optional[torch.Tensor]
                     [n_trunks, n_queries, n_keys]
-                q_pad: query padded dimension
+                "q_pad": query padded dimension
+                "k_pad_left": number of dimensions padded to the left of the key tensor
+                "k_pad_right": number of dimensions padded to the right of the key tensor
     """
 
     assert n_keys >= n_queries
@@ -308,8 +310,8 @@ def rearrange_qk_to_dense_trunk(
     if compute_mask:
         pad_mask = q[0].new_ones(
             *(1,) * len(q[0].shape[:-2]),
-            n + q_pad_length,
-            n + pad_left + pad_right,
+            n + q_pad_length,          # = n_trunks * n_queries    for query tensor
+            n + pad_left + pad_right,  # = n_keys + (n_trunks - 1) * n_queries   for key tensor
             requires_grad=False,
         )
         pad_mask[..., :n, 0:pad_left] = 0
@@ -317,10 +319,11 @@ def rearrange_qk_to_dense_trunk(
         pad_mask[..., n::, :] = 0
 
         concat_split_data = optimized_concat_split(pad_mask, n_queries)
+        # concat_split_data.shape: [..., n_queries, n_trunks * (n_keys + (n_trunks - 1) * n_queries)]
         pad_mask_trunked = (
             concat_split_data.unfold(
-                -1, n_keys, pad_mask.size(-1) + n_queries
-            ).transpose(-2, -3)
+                -1, n_keys, pad_mask.size(-1) + n_queries # after "unfold", before "transpose": shape = [..., n_queries, n_trunks, n_keys]
+            ).transpose(-2, -3)   # after "transpose": shape = [..., n_trunks, n_queries, n_keys]
         ).bool()
     else:
         pad_mask_trunked = None
@@ -331,7 +334,7 @@ def rearrange_qk_to_dense_trunk(
         k_trunked = k_trunked[0]
 
     padding_info = {
-        "mask_trunked": pad_mask_trunked,
+        "mask_trunked": pad_mask_trunked, # None or a tensor with shape = [..., n_trunks, n_queries, n_keys]
         "q_pad": q_pad_length,
         "k_pad_left": pad_left,
         "k_pad_right": pad_right,
@@ -824,9 +827,12 @@ def gather_pair_embedding_in_dense_trunk(
 ):
     """
     Selectively gather elements from a tensor using two sets of indices.
+            N_b: number of blocks/trunks/splits
+            N_q: number of queries
+            N_k: number of keys
 
         x: [..., N_token, N_token, d]
-        idx_q: [N_b, N_q]
+        idx_q: [N_b, N_q]   
         idx_k: [N_b, N_k]
 
     Return:
@@ -842,10 +848,11 @@ def gather_pair_embedding_in_dense_trunk(
     N_k = idx_k.shape[1]
 
     # Expand idx_q and idx_k to match the shape required for advanced indexing
-    idx_q_expanded = idx_q.unsqueeze(-1).expand(-1, -1, N_k)
-    idx_k_expanded = idx_k.unsqueeze(1).expand(-1, N_q, -1)
+    idx_q_expanded = idx_q.unsqueeze(-1).expand(-1, -1, N_k)  # shape: [N_b, N_q, N_k]
+    idx_k_expanded = idx_k.unsqueeze(1).expand(-1, N_q, -1)   # shape: [N_b, N_q, N_k]
 
     # Use advanced indexing to gather the desired elements
+    # https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
     y = x[..., idx_q_expanded, idx_k_expanded, :]
 
     return y
