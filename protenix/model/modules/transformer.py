@@ -289,6 +289,8 @@ class DiffusionTransformerBlock(nn.Module):
             inplace_safe=inplace_safe,
             chunk_size=chunk_size,
         )
+        # The following code implementation is inconsistent with the pseudocode "Algorithm 23 Diffusion Transformer" in the AF3 paper
+        # https://github.com/bytedance/Protenix/issues/272
         if inplace_safe:
             attn_out += a
         else:

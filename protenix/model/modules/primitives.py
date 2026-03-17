@@ -46,6 +46,7 @@ class AdaptiveLayerNorm(nn.Module):
             c_s (int, optional):  hidden dim [for single embedding]. Defaults to 384.
         """
         super(AdaptiveLayerNorm, self).__init__()
+        # why not use FusedLayerNorm here ?
         self.layernorm_a = nn.LayerNorm(c_a, elementwise_affine=False, bias=False)
         # The pytorch version should be newer than 2.1
         self.layernorm_s = nn.LayerNorm(c_s, bias=False)
